@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comentários do YouTube</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --text: #16181d; --muted: #646b78;
+    --border: #e1e4ea; --accent: #d92d20; --accent-hover: #b42318; --accent-soft: #fdecea;
+    --ok: #12804a; --row-hover: #f2f4f7; --shadow: 0 1px 2px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --surface: #171a21; --text: #e8eaee; --muted: #9aa1ad;
+      --border: #2a2f3a; --accent: #f04438; --accent-hover: #f97066; --accent-soft: #3a1714;
+      --ok: #32d583; --row-hover: #1d212a; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  header .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent);
+    display: grid; place-items: center; color: #fff; flex: none; }
+  h1 { font-size: 22px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .hint a { color: inherit; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 76px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .grid { display: grid; gap: 14px; }
+  .opts { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; padding: 9px 0; }
+  .check input { width: 17px; height: 17px; accent-color: var(--accent); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  button:hover:not(:disabled) { background: var(--row-hover); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .key-row { display: flex; gap: 8px; }
+  .key-row input { flex: 1; }
+  #status { font-size: 14px; color: var(--muted); min-height: 21px; }
+  #status.err { color: var(--accent); }
+  #status.ok { color: var(--ok); }
+  .progress { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 8px; display: none; }
+  .progress div { height: 100%; width: 30%; background: var(--accent); animation: slide 1.1s infinite ease-in-out; }
+  @keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .videos { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .video { display: flex; gap: 12px; align-items: center; }
+  .video img { width: 96px; height: 54px; object-fit: cover; border-radius: 6px; flex: none; background: var(--border); }
+  .video a { color: var(--text); font-weight: 600; text-decoration: none; }
+  .video a:hover { text-decoration: underline; }
+  .video small { display: block; color: var(--muted); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .toolbar input[type=text] { flex: 1 1 220px; width: auto; }
+  .toolbar input[type=number] { width: 120px; }
+  .toolbar select { width: auto; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg); font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; position: sticky; top: 0; }
+  th.sorted { color: var(--text); }
+  tbody tr:hover { background: var(--row-hover); }
+  td.author { white-space: nowrap; font-weight: 600; }
+  td.author a { color: inherit; text-decoration: none; }
+  td.text { min-width: 280px; white-space: pre-wrap; word-break: break-word; }
+  td.num, td.date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; }
+  tr.reply td.text { padding-left: 28px; color: var(--muted); }
+  .tag { font-size: 11px; background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 1px 6px; margin-right: 6px; font-weight: 600; }
+  mark { background: #fde68a; color: #111; border-radius: 2px; }
+  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--muted); font-size: 13px; gap: 8px; flex-wrap: wrap; }
+  .empty { padding: 32px; text-align: center; color: var(--muted); }
+  #results { display: none; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details ol { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+    </div>
+    <div>
+      <h1>Comentários do YouTube</h1>
+      <p>Extraia, pesquise e exporte comentários de qualquer vídeo público.</p>
+    </div>
+  </header>
+
+  <section class="card grid">
+    <div>
+      <label for="apiKey">Chave da API do YouTube</label>
+      <div class="key-row">
+        <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
+        <button type="button" id="toggleKey">Mostrar</button>
+      </div>
+      <div class="hint">Fica salva só neste navegador.</div>
+      <details style="margin-top:8px">
+        <summary>Como conseguir uma chave (grátis)</summary>
+        <ol>
+          <li>Acesse <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">console.cloud.google.com</a> e crie/escolha um projeto.</li>
+          <li>Clique em <b>Ativar</b> na "YouTube Data API v3".</li>
+          <li>Vá em <b>APIs e serviços → Credenciais → Criar credenciais → Chave de API</b>.</li>
+          <li>Cole a chave aqui. A cota gratuita (10.000 unidades/dia) dá para ~1 milhão de comentários por dia.</li>
+        </ol>
+      </details>
+    </div>
+    <div>
+      <label for="urls">Links dos vídeos</label>
+      <textarea id="urls" placeholder="https://www.youtube.com/watch?v=...&#10;Um link por linha — aceita watch, youtu.be, shorts e live"></textarea>
+    </div>
+    <div class="grid opts">
+      <div>
+        <label for="order">Ordem</label>
+        <select id="order">
+          <option value="time">Mais recentes</option>
+          <option value="relevance">Mais relevantes</option>
+        </select>
+      </div>
+      <div>
+        <label for="limit">Máx. comentários por vídeo</label>
+        <input type="number" id="limit" min="0" step="100" placeholder="Sem limite">
+      </div>
+      <label class="check"><input type="checkbox" id="replies" checked> Incluir respostas</label>
+      <div class="row" style="justify-content:flex-end">
+        <button type="button" id="cancel" style="display:none">Cancelar</button>
+        <button type="button" class="primary" id="fetch">Extrair comentários</button>
+      </div>
+    </div>
+    <div>
+      <div id="status" role="status"></div>
+      <div class="progress" id="progress"><div></div></div>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="videos card" id="videos"></div>
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Pesquisar no texto ou autor…">
+        <input type="number" id="minLikes" min="0" placeholder="Likes ≥">
+        <select id="typeFilter">
+          <option value="all">Comentários e respostas</option>
+          <option value="top">Só comentários</option>
+          <option value="reply">Só respostas</option>
+          <option value="question">Só perguntas (?)</option>
+        </select>
+        <select id="videoFilter"></select>
+      </div>
+      <div class="toolbar">
+        <button type="button" id="exportCsv">Baixar CSV</button>
+        <button type="button" id="exportXlsx">Baixar Excel</button>
+        <button type="button" id="copyTsv" title="Cole direto no Google Planilhas">Copiar p/ Planilhas</button>
+        <span class="hint" id="exportHint" style="margin:0"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="thead"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span id="pageInfo"></span>
+        <div class="row">
+          <button type="button" id="prev">Anterior</button>
+          <button type="button" id="next">Próxima</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const API = 'https://www.googleapis.com/youtube/v3/';
+const PAGE_SIZE = 50;
+const $ = id => document.getElementById(id);
+
+const COLUMNS = [
+  { key: 'author', label: 'Autor' },
+  { key: 'text', label: 'Comentário' },
+  { key: 'published', label: 'Data' },
+  { key: 'likes', label: 'Likes' },
+  { key: 'replyCount', label: 'Respostas' },
+];
+
+const state = { rows: [], videos: [], filtered: [], page: 0, sortKey: 'published', sortDir: -1, abort: null };
+
+// ---------- storage (best-effort) ----------
+function store(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
+
+$('apiKey').value = load('yt_api_key') || '';
+$('apiKey').addEventListener('change', e => store('yt_api_key', e.target.value.trim()));
+$('toggleKey').onclick = () => {
+  const i = $('apiKey'); const show = i.type === 'password';
+  i.type = show ? 'text' : 'password'; $('toggleKey').textContent = show ? 'Ocultar' : 'Mostrar';
+};
+
+// ---------- helpers ----------
+function parseVideoId(s) {
+  s = s.trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  try {
+    const u = new URL(s.startsWith('http') ? s : 'https://' + s);
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1, 12);
+    if (u.searchParams.get('v')) return u.searchParams.get('v');
+    const m = u.pathname.match(/\/(?:shorts|live|embed|v)\/([\w-]{11})/);
+    if (m) return m[1];
+  } catch {}
+  return null;
+}
+
+function setStatus(msg, cls = '') { const s = $('status'); s.textContent = msg; s.className = cls; }
+const fmtNum = n => Number(n || 0).toLocaleString('pt-BR');
+const fmtDate = iso => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const ERRORS = {
+  commentsDisabled: 'os comentários estão desativados neste vídeo',
+  quotaExceeded: 'a cota diária da API acabou — tente amanhã ou use outra chave',
+  keyInvalid: 'a chave da API é inválida',
+  videoNotFound: 'vídeo não encontrado',
+  forbidden: 'acesso negado (vídeo privado ou chave sem permissão)',
+  accessNotConfigured: 'a YouTube Data API v3 não está ativada no projeto dessa chave',
+};
+
+async function api(path, params, signal) {
+  const qs = new URLSearchParams({ ...params, key: $('apiKey').value.trim() });
+  const res = await fetch(API + path + '?' + qs, { signal });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const reason = data.error?.errors?.[0]?.reason || data.error?.details?.[0]?.reason;
+    const err = new Error(ERRORS[reason] || data.error?.message || `erro HTTP ${res.status}`);
+    err.reason = reason;
+    throw err;
+  }
+  return data;
+}
+
+function toRow(c, videoId, parentId) {
+  const s = c.snippet;
+  return {
+    id: c.id, videoId, parentId: parentId || '',
+    type: parentId ? 'reply' : 'top',
+    author: s.authorDisplayName || '',
+    authorUrl: s.authorChannelUrl || '',
+    text: s.textOriginal ?? s.textDisplay ?? '',
+    published: s.publishedAt,
+    updated: s.updatedAt,
+    likes: s.likeCount || 0,
+    replyCount: 0,
+  };
+}
+
+// ---------- fetching ----------
+async function fetchVideo(videoId, opts, signal, onProgress) {
+  const rows = [];
+  let pageToken = '';
+  let topCount = 0;
+  do {
+    const data = await api('commentThreads', {
+      part: 'snippet,replies', videoId, maxResults: 100, order: opts.order,
+      textFormat: 'plainText', ...(pageToken && { pageToken }),
+    }, signal);
+    for (const t of data.items || []) {
+      const top = toRow(t.snippet.topLevelComment, videoId);
+      top.replyCount = t.snippet.totalReplyCount || 0;
+      rows.push(top); topCount++;
+      if (opts.replies && top.replyCount > 0) {
+        const inline = t.replies?.comments || [];
+        if (inline.length >= top.replyCount) {
+          inline.slice().reverse().forEach(r => rows.push(toRow(r, videoId, top.id)));
+        } else {
+          let rt = '';
+          do {
+            const rd = await api('comments', {
+              part: 'snippet', parentId: top.id, maxResults: 100, textFormat: 'plainText', ...(rt && { pageToken: rt }),
+            }, signal);
+            (rd.items || []).forEach(r => rows.push(toRow(r, videoId, top.id)));
+            rt = rd.nextPageToken;
+          } while (rt);
+        }
+      }
+      if (opts.limit && topCount >= opts.limit) break;
+    }
+    onProgress(rows.length);
+    pageToken = data.nextPageToken;
+  } while (pageToken && !(opts.limit && topCount >= opts.limit));
+  return rows;
+}
+
+$('fetch').onclick = async () => {
+  if (!$('apiKey').value.trim()) { setStatus('Cole sua chave da API do YouTube primeiro.', 'err'); $('apiKey').focus(); return; }
+  store('yt_api_key', $('apiKey').value.trim());
+  const lines = $('urls').value.split(/\n|,|\s+/).filter(Boolean);
+  const ids = [...new Set(lines.map(parseVideoId).filter(Boolean))];
+  if (!ids.length) { setStatus('Nenhum link de vídeo válido encontrado.', 'err'); $('urls').focus(); return; }
+
+  const opts = { order: $('order').value, replies: $('replies').checked, limit: parseInt($('limit').value) || 0 };
+  const ctrl = new AbortController(); state.abort = ctrl;
+  busy(true);
+  const allRows = [], videos = [], failures = [];
+  try {
+    const info = await api('videos', { part: 'snippet,statistics', id: ids.join(',') }, ctrl.signal);
+    const byId = Object.fromEntries((info.items || []).map(v => [v.id, v]));
+    for (const [i, id] of ids.entries()) {
+      const v = byId[id];
+      if (!v) { failures.push(`${id}: vídeo não encontrado`); continue; }
+      const title = v.snippet.title;
+      try {
+        const rows = await fetchVideo(id, opts, ctrl.signal, n =>
+          setStatus(`Vídeo ${i + 1}/${ids.length} — “${title}”: ${fmtNum(n)} comentários…`));
+        allRows.push(...rows);
+        videos.push({ id, title, channel: v.snippet.channelTitle, thumb: v.snippet.thumbnails?.medium?.url,
+          views: v.statistics.viewCount, totalComments: v.statistics.commentCount, fetched: rows.length });
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        failures.push(`“${title}”: ${e.message}`);
+        if (e.reason === 'quotaExceeded' || e.reason === 'keyInvalid' || e.reason === 'accessNotConfigured') break;
+      }
+    }
+    const msg = `Pronto: ${fmtNum(allRows.length)} comentários de ${videos.length} vídeo(s).`;
+    setStatus(failures.length ? `${msg} Falhas — ${failures.join(' · ')}` : msg, failures.length && !videos.length ? 'err' : 'ok');
+  } catch (e) {
+    setStatus(e.name === 'AbortError' ? `Cancelado. ${fmtNum(allRows.length)} comentários mantidos.` : 'Erro: ' + e.message, 'err');
+  } finally {
+    busy(false);
+  }
+  if (allRows.length) showResults(allRows, videos);
+};
+
+$('cancel').onclick = () => state.abort?.abort();
+
+function busy(on) {
+  $('fetch').disabled = on; $('cancel').style.display = on ? '' : 'none';
+  $('progress').style.display = on ? 'block' : 'none';
+  if (on) setStatus('Buscando informações do vídeo…');
+}
+
+// ---------- results ----------
+function showResults(rows, videos) {
+  state.rows = rows; state.videos = videos; state.page = 0;
+  $('results').style.display = 'block';
+  $('videos').innerHTML = videos.map(v => `
+    <div class="video">
+      ${v.thumb ? `<img src="${esc(v.thumb)}" alt="">` : ''}
+      <div><a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">${esc(v.title)}</a>
+      <small>${esc(v.channel)} · ${fmtNum(v.views)} views · ${fmtNum(v.fetched)} de ${fmtNum(v.totalComments)} comentários extraídos</small></div>
+    </div>`).join('');
+  const vf = $('videoFilter');
+  vf.innerHTML = '<option value="">Todos os vídeos</option>' +
+    videos.map(v => `<option value="${v.id}">${esc(v.title.slice(0, 50))}</option>`).join('');
+  vf.style.display = videos.length > 1 ? '' : 'none';
+
+  const top = rows.filter(r => r.type === 'top');
+  const authors = new Set(rows.map(r => r.author)).size;
+  const questions = rows.filter(r => r.text.includes('?')).length;
+  const likes = rows.reduce((a, r) => a + r.likes, 0);
+  $('stats').innerHTML = [
+    [rows.length, 'comentários no total'], [top.length, 'comentários principais'],
+    [rows.length - top.length, 'respostas'], [authors, 'autores únicos'],
+    [questions, 'com perguntas'], [likes, 'likes somados'],
+  ].map(([n, l]) => `<div class="stat"><b>${fmtNum(n)}</b><span>${l}</span></div>`).join('');
+  applyFilters();
+  $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyFilters() {
+  const q = $('search').value.trim().toLowerCase();
+  const min = parseInt($('minLikes').value) || 0;
+  const type = $('typeFilter').value;
+  const vid = $('videoFilter').value;
+  let rows = state.rows.filter(r =>
+    (!q || r.text.toLowerCase().includes(q) || r.author.toLowerCase().includes(q)) &&
+    r.likes >= min &&
+    (type === 'all' || (type === 'question' ? r.text.includes('?') : r.type === type)) &&
+    (!vid || r.videoId === vid));
+  const k = state.sortKey, d = state.sortDir;
+  rows.sort((a, b) => {
+    const av = a[k], bv = b[k];
+    return (typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv), 'pt-BR')) * d;
+  });
+  state.filtered = rows;
+  state.page = Math.min(state.page, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1));
+  render();
+}
+
+function highlight(text, q) {
+  const safe = esc(text);
+  if (!q) return safe;
+  const re = new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return safe.replace(re, m => `<mark>${m}</mark>`);
+}
+
+function render() {
+  $('thead').innerHTML = COLUMNS.map(c =>
+    `<th data-key="${c.key}" class="${state.sortKey === c.key ? 'sorted' : ''}">${c.label}${state.sortKey === c.key ? (state.sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('');
+  const q = $('search').value.trim();
+  const start = state.page * PAGE_SIZE;
+  const slice = state.filtered.slice(start, start + PAGE_SIZE);
+  $('tbody').innerHTML = slice.length ? slice.map(r => `
+    <tr class="${r.type}">
+      <td class="author">${r.authorUrl ? `<a href="${esc(r.authorUrl)}" target="_blank" rel="noopener">${highlight(r.author, q)}</a>` : highlight(r.author, q)}</td>
+      <td class="text">${r.type === 'reply' ? '<span class="tag">resposta</span>' : ''}${highlight(r.text, q)}</td>
+      <td class="date"><a href="https://www.youtube.com/watch?v=${r.videoId}&lc=${r.id}" target="_blank" rel="noopener" style="color:inherit">${fmtDate(r.published)}</a></td>
+      <td class="num">${fmtNum(r.likes)}</td>
+      <td class="num">${r.type === 'top' ? fmtNum(r.replyCount) : ''}</td>
+    </tr>`).join('') : `<tr><td colspan="5" class="empty">Nenhum comentário corresponde aos filtros.</td></tr>`;
+  const total = state.filtered.length, pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  $('pageInfo').textContent = `${fmtNum(total)} resultado(s) · página ${state.page + 1} de ${pages}`;
+  $('prev').disabled = state.page === 0;
+  $('next').disabled = state.page >= pages - 1;
+  $('exportHint').textContent = total !== state.rows.length ? `Exporta os ${fmtNum(total)} filtrados` : '';
+}
+
+$('thead').onclick = e => {
+  const k = e.target.closest('th')?.dataset.key; if (!k) return;
+  if (state.sortKey === k) state.sortDir *= -1; else { state.sortKey = k; state.sortDir = k === 'author' || k === 'text' ? 1 : -1; }
+  applyFilters();
+};
+['search', 'minLikes', 'typeFilter', 'videoFilter'].forEach(id =>
+  $(id).addEventListener('input', () => { state.page = 0; applyFilters(); }));
+$('prev').onclick = () => { state.page--; render(); };
+$('next').onclick = () => { state.page++; render(); };
+
+// ---------- export ----------
+function exportTable() {
+  const titles = Object.fromEntries(state.videos.map(v => [v.id, v.title]));
+  const head = ['Autor', 'Comentário', 'Data', 'Likes', 'Respostas', 'Tipo', 'Vídeo', 'Link'];
+  const body = state.filtered.map(r => [
+    r.author, r.text, r.published, r.likes, r.type === 'top' ? r.replyCount : '',
+    r.type === 'top' ? 'comentário' : 'resposta', titles[r.videoId] || r.videoId,
+    `https://www.youtube.com/watch?v=${r.videoId}&lc=${r.id}`,
+  ]);
+  return [head, ...body];
+}
+function fileBase() {
+  const t = state.videos.length === 1 ? state.videos[0].title : 'varios-videos';
+  return 'comentarios-' + t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').slice(0, 50).toLowerCase();
+}
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('exportCsv').onclick = () => {
+  const csv = exportTable().map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  download(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), fileBase() + '.csv');
+};
+$('exportXlsx').onclick = async () => {
+  try {
+    if (!window.XLSX) await new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = ok; s.onerror = fail; document.head.appendChild(s);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(exportTable());
+    ws['!cols'] = [{ wch: 24 }, { wch: 80 }, { wch: 22 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 40 }, { wch: 50 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Comentários');
+    XLSX.writeFile(wb, fileBase() + '.xlsx');
+  } catch { setStatus('Não foi possível gerar o Excel (sem internet?). Use o CSV.', 'err'); }
+};
+$('copyTsv').onclick = async () => {
+  const tsv = exportTable().map(r => r.map(v => String(v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(tsv); $('exportHint').textContent = 'Copiado! Cole na célula A1 da planilha.'; }
+  catch { $('exportHint').textContent = 'Não foi possível copiar.'; }
+};
+
+$('urls').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) $('fetch').click(); });
+</script>
+</body>
+</html>
