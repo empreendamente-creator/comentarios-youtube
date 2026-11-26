@@ -168,6 +168,7 @@
         <button type="button" id="exportCsv">Baixar CSV</button>
         <button type="button" id="exportXlsx">Baixar Excel</button>
         <button type="button" id="exportMd">Baixar Markdown</button>
+        <button type="button" id="exportMdAi" title="Uma linha por comentário, sem links: menor, ideal para colar no ChatGPT, Claude ou Gemini">Markdown p/ IA</button>
         <button type="button" id="copyTsv" title="Cole direto no Google Planilhas">Copiar p/ Planilhas</button>
         <span class="hint" id="exportHint" style="margin:0"></span>
       </div>
@@ -477,21 +478,25 @@ $('exportXlsx').onclick = async () => {
     XLSX.writeFile(wb, fileBase() + '.xlsx');
   } catch { setStatus('Não foi possível gerar o Excel (sem internet?). Use o CSV.', 'err'); }
 };
+// filtered rows of one video, with replies right below their comment (oldest first);
+// orphans (parent filtered out) stay in place
+function threadedRows(videoId) {
+  const inVideo = state.filtered.filter(r => r.videoId === videoId);
+  const shown = new Set(inVideo.map(r => r.id));
+  const repliesOf = {};
+  inVideo.filter(r => r.type === 'reply' && shown.has(r.parentId))
+    .forEach(r => (repliesOf[r.parentId] ||= []).push(r));
+  Object.values(repliesOf).forEach(list => list.sort((a, b) => a.published.localeCompare(b.published)));
+  return inVideo.flatMap(r =>
+    r.type === 'top' ? [r, ...(repliesOf[r.id] || [])] : shown.has(r.parentId) ? [] : [r]);
+}
 $('exportMd').onclick = () => {
   const byId = Object.fromEntries(state.rows.map(r => [r.id, r]));
   const now = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
   const out = [];
   for (const v of state.videos) {
-    const inVideo = state.filtered.filter(r => r.videoId === v.id);
-    if (!inVideo.length) continue;
-    // replies go right below their comment, oldest first; orphans (parent filtered out) stay in place
-    const shown = new Set(inVideo.map(r => r.id));
-    const repliesOf = {};
-    inVideo.filter(r => r.type === 'reply' && shown.has(r.parentId))
-      .forEach(r => (repliesOf[r.parentId] ||= []).push(r));
-    Object.values(repliesOf).forEach(list => list.sort((a, b) => a.published.localeCompare(b.published)));
-    const rows = inVideo.flatMap(r =>
-      r.type === 'top' ? [r, ...(repliesOf[r.id] || [])] : shown.has(r.parentId) ? [] : [r]);
+    const rows = threadedRows(v.id);
+    if (!rows.length) continue;
     out.push(`# ${v.title}`, '',
       `- **Canal:** ${v.channel}`,
       `- **Vídeo:** https://www.youtube.com/watch?v=${v.id}`,
@@ -510,6 +515,27 @@ $('exportMd').onclick = () => {
     out.push('---', '');
   }
   download(new Blob([out.join('\n')], { type: 'text/markdown;charset=utf-8' }), fileBase() + '.md');
+};
+// compact version for pasting into an AI: one line per comment, no links, title once per video
+$('exportMdAi').onclick = () => {
+  const byId = Object.fromEntries(state.rows.map(r => [r.id, r]));
+  const day = iso => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const oneLine = s => s.replace(/\s*\r?\n\s*/g, ' / ').trim();
+  const shown = new Set(state.filtered.map(r => r.id));
+  const out = [];
+  for (const v of state.videos) {
+    const rows = threadedRows(v.id);
+    if (!rows.length) continue;
+    out.push(`# ${v.title}`, `Canal: ${v.channel} · https://youtu.be/${v.id} · ${rows.length} comentários`, '');
+    for (const r of rows) {
+      const likes = r.likes ? `, ${r.likes} like${r.likes > 1 ? 's' : ''}` : '';
+      if (r.type === 'top') out.push(`- ${r.author} (${day(r.published)}${likes}): ${oneLine(r.text)}`);
+      else if (shown.has(r.parentId)) out.push(`  - ${r.author}${likes ? ` (${likes.slice(2)})` : ''}: ${oneLine(r.text)}`);
+      else out.push(`- ${r.author} (resposta a ${byId[r.parentId]?.author || 'comentário'}, ${day(r.published)}${likes}): ${oneLine(r.text)}`);
+    }
+    out.push('');
+  }
+  download(new Blob([out.join('\n')], { type: 'text/markdown;charset=utf-8' }), fileBase() + '-ia.md');
 };
 $('copyTsv').onclick = async () => {
   const tsv = exportTable().map(r => r.map(v => String(v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
