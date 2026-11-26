@@ -167,6 +167,7 @@
       <div class="toolbar">
         <button type="button" id="exportCsv">Baixar CSV</button>
         <button type="button" id="exportXlsx">Baixar Excel</button>
+        <button type="button" id="exportMd">Baixar Markdown</button>
         <button type="button" id="copyTsv" title="Cole direto no Google Planilhas">Copiar p/ Planilhas</button>
         <span class="hint" id="exportHint" style="margin:0"></span>
       </div>
@@ -475,6 +476,40 @@ $('exportXlsx').onclick = async () => {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Comentários');
     XLSX.writeFile(wb, fileBase() + '.xlsx');
   } catch { setStatus('Não foi possível gerar o Excel (sem internet?). Use o CSV.', 'err'); }
+};
+$('exportMd').onclick = () => {
+  const byId = Object.fromEntries(state.rows.map(r => [r.id, r]));
+  const now = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  const out = [];
+  for (const v of state.videos) {
+    const inVideo = state.filtered.filter(r => r.videoId === v.id);
+    if (!inVideo.length) continue;
+    // replies go right below their comment, oldest first; orphans (parent filtered out) stay in place
+    const shown = new Set(inVideo.map(r => r.id));
+    const repliesOf = {};
+    inVideo.filter(r => r.type === 'reply' && shown.has(r.parentId))
+      .forEach(r => (repliesOf[r.parentId] ||= []).push(r));
+    Object.values(repliesOf).forEach(list => list.sort((a, b) => a.published.localeCompare(b.published)));
+    const rows = inVideo.flatMap(r =>
+      r.type === 'top' ? [r, ...(repliesOf[r.id] || [])] : shown.has(r.parentId) ? [] : [r]);
+    out.push(`# ${v.title}`, '',
+      `- **Canal:** ${v.channel}`,
+      `- **Vídeo:** https://www.youtube.com/watch?v=${v.id}`,
+      `- **Comentários exportados:** ${fmtNum(rows.length)}`,
+      `- **Extraído em:** ${now}`, '');
+    for (const r of rows) {
+      const parent = r.parentId && byId[r.parentId];
+      const head = [
+        `**${r.author}**`, fmtDate(r.published), `${fmtNum(r.likes)} likes`,
+        r.type === 'top' && r.replyCount ? `${fmtNum(r.replyCount)} respostas` : '',
+        `[abrir](https://www.youtube.com/watch?v=${r.videoId}&lc=${r.id})`,
+      ].filter(Boolean).join(' · ');
+      out.push(r.type === 'reply' ? `↳ Resposta a ${parent ? parent.author : 'comentário'} — ${head}` : head, '');
+      out.push(r.text.split(/\r?\n/).map(l => '> ' + l).join('\n'), '');
+    }
+    out.push('---', '');
+  }
+  download(new Blob([out.join('\n')], { type: 'text/markdown;charset=utf-8' }), fileBase() + '.md');
 };
 $('copyTsv').onclick = async () => {
   const tsv = exportTable().map(r => r.map(v => String(v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
